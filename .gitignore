@@ -31,3 +31,5 @@ DerivedData
 # Carthage/Checkouts
 
 Carthage/Build
+Build/
+.DS_Store
