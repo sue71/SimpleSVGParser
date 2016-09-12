@@ -214,6 +214,8 @@
 		9E6233AA1B410C1400034909 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftMigration = 0730;
+				LastSwiftUpdateCheck = 0730;
 				LastUpgradeCheck = 0630;
 				ORGANIZATIONNAME = "Masaki Sueda";
 				TargetAttributes = {

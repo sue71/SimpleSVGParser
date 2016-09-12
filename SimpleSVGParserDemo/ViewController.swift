@@ -16,7 +16,7 @@ class ViewController: UIViewController {
         
         self.view.backgroundColor = UIColor.blackColor()
         
-        var path = SimpleSVGParser.buildPathFromSVG("sample")
+        let path = SimpleSVGParser.buildPathFromSVG("sample")
         let shapeLayer = CAShapeLayer()
         
         shapeLayer.path = path

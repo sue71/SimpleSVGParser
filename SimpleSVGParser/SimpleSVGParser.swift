@@ -8,8 +8,8 @@
 
 import Foundation
 
-let COMMANDS = "MmZzLlHhVvCcSsQqTtAa"
-let ABSOLUTE_COMMANDS = "MZLHVCSQTA"
+let commandOperators = "MmZzLlHhVvCcSsQqTtAa"
+let absoluteCommandOperators = "MZLHVCSQTA"
 
 struct SimpleSVGCommand {
     var command:NSString
@@ -25,11 +25,11 @@ public class SimpleSVGParser:NSObject {
     
     
     public static func buildPathFromSVG(named: String) -> CGPath? {
-        var svgParser = SimpleSVGParser()
-        return svgParser.buildPathFromSVG(named: named)
+        let svgParser = SimpleSVGParser()
+        return svgParser.buildPathFromSVG(named)
     }
     
-    func buildPathFromSVG(#named: String) -> CGPath? {
+    func buildPathFromSVG(named: String) -> CGPath? {
         let path = NSBundle.mainBundle().pathForResource(named, ofType: "svg")
         
         if(path == nil){
@@ -38,7 +38,13 @@ public class SimpleSVGParser:NSObject {
         }
         
         var error:NSError? = nil
-        var svgString = String(contentsOfFile: path!, encoding:NSUTF8StringEncoding, error: &error)
+        var svgString: String?
+        do {
+            svgString = try String(contentsOfFile: path!, encoding:NSUTF8StringEncoding)
+        } catch let error1 as NSError {
+            error = error1
+            svgString = nil
+        }
         
         if(error != nil){
             NSLog("[SimpleSVG] cannot read specified svg file", named);
@@ -46,17 +52,17 @@ public class SimpleSVGParser:NSObject {
             return nil
         }
         
-        var absoluteSet:NSCharacterSet = NSCharacterSet(charactersInString: ABSOLUTE_COMMANDS)
+        let absoluteSet:NSCharacterSet = NSCharacterSet(charactersInString: absoluteCommandOperators)
         let paths = self.parsePathString(NSString(string:svgString!))
         
-        var bezier = UIBezierPath()
+        let bezier = UIBezierPath()
         bezier.moveToPoint(self.prevPoint)
         
         for path in paths {
-            var commands = self.buildDAttribute(path)
+            let commands = self.buildDAttribute(path)
             for svgCommand in commands {
                 NSLog("\(svgCommand.command)")
-                var isAbsolute = absoluteSet.characterIsMember(svgCommand.command.characterAtIndex(0))
+                let isAbsolute = absoluteSet.characterIsMember(svgCommand.command.characterAtIndex(0))
                 switch (svgCommand.command.uppercaseString) {
                 case "M":
                     // move to
@@ -134,7 +140,7 @@ public class SimpleSVGParser:NSObject {
             bezier.addLineToPoint(point)
             
             self.prevPoint = point
-            index++
+            index += 1
         }
         
     }
@@ -159,7 +165,7 @@ public class SimpleSVGParser:NSObject {
             bezier.moveToPoint(point)
             
             self.prevPoint = point
-            index++
+            index += 1
         }
     }
     
@@ -197,7 +203,7 @@ public class SimpleSVGParser:NSObject {
             
             self.prevPoint = CGPointMake(x, y)
             self.prevControlPoint = CGPointMake(c2x, c2y)
-            index++
+            index += 1
         }
     }
     
@@ -229,13 +235,11 @@ public class SimpleSVGParser:NSObject {
                 y = self.prevPoint.y + args[index + 5]
             }
             
-            var cx1 = self.prevPoint.x + (self.prevPoint.x - self.prevControlPoint.x)
-            var cy1 = self.prevPoint.y + (self.prevPoint.y - self.prevControlPoint.y)
             bezier.addCurveToPoint(CGPointMake(x, y), controlPoint1: CGPointMake(c1x, c1y), controlPoint2: CGPointMake(c2x, c2y))
             
             self.prevPoint = CGPointMake(x, y)
             self.prevControlPoint = CGPointMake(c2x, c2y)
-            index++
+            index += 1
         }
     }
     
@@ -249,30 +253,35 @@ public class SimpleSVGParser:NSObject {
     
     func parsePathString(svgString:NSString) -> [NSString] {
         // trimming
-        var svgString = NSString(string:svgString.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()))
+        let svgString = NSString(string:svgString.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()))
         var error:NSError?
-        let pathRegex = NSRegularExpression(pattern: PATH_REGEXP, options: NSRegularExpressionOptions.AllowCommentsAndWhitespace | .DotMatchesLineSeparators | NSRegularExpressionOptions.AnchorsMatchLines, error: &error)
+        var pathRegex: NSRegularExpression?
+        do {
+            pathRegex = try NSRegularExpression(pattern: PATH_REGEXP, options: [NSRegularExpressionOptions.AllowCommentsAndWhitespace, .DotMatchesLineSeparators, NSRegularExpressionOptions.AnchorsMatchLines])
+        } catch let error1 as NSError {
+            error = error1
+            pathRegex = nil
+        }
         
         return self.execRegexp(PATH_REGEXP, targetString: svgString)
     }
     
     func buildDAttribute(svgString:NSString) -> [SimpleSVGCommand] {
-        var characterSet:NSCharacterSet = NSCharacterSet(charactersInString: COMMANDS)
+        let characterSet:NSCharacterSet = NSCharacterSet(charactersInString: commandOperators)
         
         var index:Int = 0
         var commands:[SimpleSVGCommand] = []
         var args:[CGFloat] = []
         
-        var dString:NSString = self.execRegexp(D_REGEXP, targetString: svgString)[0]
+        let dString:NSString = self.execRegexp(D_REGEXP, targetString: svgString)[0]
         
         while index < dString.length {
             var char = dString.characterAtIndex(index)
             var commandStr:NSString? = nil
-            var command:[SimpleSVGCommand] = []
             
             // search command
             if !characterSet.characterIsMember(char) {
-                index++
+                index += 1
                 continue
             } else {
                 commandStr = NSString(characters: &char, length: 1)
@@ -321,14 +330,20 @@ public class SimpleSVGParser:NSObject {
     private func execRegexp(pattern: String, targetString:NSString) -> [NSString] {
         var result:[NSString] = []
         var error:NSError?
-        let pathRegex = NSRegularExpression(pattern: pattern, options: NSRegularExpressionOptions.AllowCommentsAndWhitespace | .DotMatchesLineSeparators | NSRegularExpressionOptions.AnchorsMatchLines, error: &error)
+        let pathRegex: NSRegularExpression?
+        do {
+            pathRegex = try NSRegularExpression(pattern: pattern, options: [NSRegularExpressionOptions.AllowCommentsAndWhitespace, .DotMatchesLineSeparators, NSRegularExpressionOptions.AnchorsMatchLines])
+        } catch let error1 as NSError {
+            error = error1
+            pathRegex = nil
+        }
         
         if error != nil {
             NSLog("[SimpleSVG][ERROR] svg format is illegal")
             return []
         }
         
-        var matches:[AnyObject]? = pathRegex?.matchesInString(targetString as String, options: nil, range:NSMakeRange(0, targetString.length))
+        var matches:[AnyObject]? = pathRegex?.matchesInString(targetString as String, options: [], range:NSMakeRange(0, targetString.length))
         
         if matches == nil {
             NSLog("[SimpleSVG][ERROR] svg format is illegal")
@@ -336,14 +351,13 @@ public class SimpleSVGParser:NSObject {
         }
         
         if matches!.count > 0 {
-            for var i = 0; i < matches!.count; i++ {
-                var match = matches![i] as! NSTextCheckingResult
-                var count = match.numberOfRanges
-                var range = match.range
+            for i in 0..<matches!.count {
+                let match = matches![i] as! NSTextCheckingResult
+                let count = match.numberOfRanges
                 
-                for var j = 0 ; j < count; ++j {
-                    var range:NSRange = match.rangeAtIndex(j)
-                    var str = NSString(string: targetString).substringWithRange(range)
+                for j in 0..<count {
+                    let range:NSRange = match.rangeAtIndex(j)
+                    let str = NSString(string: targetString).substringWithRange(range)
                     result.append(str)
                 }
             }
